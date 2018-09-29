@@ -23,4 +23,48 @@
         android:layout_height="wrap_content"
         android:text="TextView"/>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        style="?android:attr/buttonBarStyle"
+        >
+
+        <Button
+            android:id="@+id/nav_settings"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="onSettingsClick"
+            android:text="Settings"/>
+        <Button
+            android:id="@+id/nav_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="onClearClick"
+            style="?android:attr/buttonBarButtonStyle"
+            android:text="Clear"/>
+        <Button
+            android:id="@+id/nav_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="onAddClick"
+            style="?android:attr/buttonBarButtonStyle"
+            android:text="Add"/>
+        <Button
+            android:id="@+id/nav_start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:onClick="onStartClick"
+            style="?android:attr/buttonBarButtonStyle"
+            android:text="Start"/>
+    </LinearLayout>
+
 </android.support.constraint.ConstraintLayout>

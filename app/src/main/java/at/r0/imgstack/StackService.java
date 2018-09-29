@@ -1,25 +1,23 @@
 package at.r0.imgstack;
 
 import android.app.IntentService;
-import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import android.support.annotation.Nullable;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
 
@@ -35,6 +33,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.stream.Collectors;
+
 import org.opencv.android.OpenCVLoader;
 
 public class StackService extends IntentService
@@ -60,18 +60,6 @@ public class StackService extends IntentService
         super("StackService");
     }
 
-    private List<InputStream> clipDataToInputStreams(ClipData cd) throws FileNotFoundException
-    {
-        ContentResolver cr = this.getContentResolver();
-        LinkedList<InputStream> streams = new LinkedList<>();
-        for (int i=0; i<cd.getItemCount(); ++i)
-        {
-            InputStream is = cr.openInputStream(cd.getItemAt(i).getUri());
-            streams.add(is);
-        }
-        return streams;
-    }
-
     @Override
     protected void onHandleIntent(@Nullable Intent intent)
     {
@@ -94,16 +82,11 @@ public class StackService extends IntentService
 
         try
         {
-            List<InputStream> streams;
-            try
-            {
-                streams = clipDataToInputStreams(intent.getClipData());
-            }
-            catch (FileNotFoundException e)
-            {
-                e.printStackTrace();
-                return;
-            }
+            List<InputStream> streams = new LinkedList<>();
+            ArrayList<Uri> uris = intent.getExtras().getParcelableArrayList("IMAGE_URIS");
+            ContentResolver cr = this.getContentResolver();
+            for (Uri u : uris)
+                streams.add(cr.openInputStream(u));
 
             Stacker s = null;
             int n = streams.size();
@@ -195,45 +178,6 @@ public class StackService extends IntentService
         File imgFile = new File(dcim,new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime())+".jpg");
         bm.compress(Bitmap.CompressFormat.JPEG, 90, new FileOutputStream(imgFile));
         return imgFile;
-    }
-
-    class StackTask extends AsyncTask<List<InputStream>, Double, Mat>
-    {
-        @Override
-        protected Mat doInBackground(List<InputStream>... args)
-        {
-            List<InputStream> inputStreams = args[0];
-            Stacker s = null;
-            int n = inputStreams.size();
-            Mat grey = new Mat();
-            Mat rgb = new Mat();
-            Mat out = new Mat();
-            Mat tmp = new Mat();
-            int prog = 0;
-            for (InputStream in : inputStreams)
-            {
-                try{streamToMat(in, rgb);}catch(IOException ex){return null;}
-                Imgproc.cvtColor(rgb, grey, Imgproc.COLOR_BGRA2GRAY);
-                if (s == null)
-                {
-                    s = new Stacker(grey);
-                    rgb.convertTo(out, CvType.CV_32FC3, 1.0/(255.0*n));
-                    continue;
-                }
-                s.stack(rgb, grey, rgb);
-                rgb.convertTo(tmp, CvType.CV_32FC3, 1.0/(255.0*n));
-                Core.add(out, tmp, out);
-                publishProgress((double)++prog/n);
-            }
-            out.convertTo(out, CvType.CV_8UC3, 255.0);
-            return out;
-        }
-
-        @Override
-        protected void onPostExecute(Mat output)
-        {
-        }
-
     }
 
 }
