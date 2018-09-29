@@ -1,6 +1,5 @@
 package at.r0.imgstack;
 
-import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
@@ -8,7 +7,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 
 import java.util.ArrayList;
@@ -21,42 +19,79 @@ public class MainActivity extends AppCompatActivity
     private static final int PICK_IMAGES = 1;
     private List<Uri> imageUris = new LinkedList<>();
 
-    @SuppressLint("RestrictedApi")
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Intent in = getIntent();
+        onNewIntent(in);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent)
+    {
+        if (intent != null && intent.getAction().equals(Intent.ACTION_SEND_MULTIPLE))
+        {
+            imageUris.addAll(intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM));
+        }
+        updateLabel();
     }
 
     @Override
     public void onActivityResult(int reqCode, int resCode, Intent data)
     {
+        onNewIntent(null);
         if (reqCode != PICK_IMAGES)
             return;
 
         TextView tv = findViewById(R.id.debugText);
         ClipData cd = data.getClipData();
-        tv.setText(String.format("%d Files:\n", imageUris.size() + cd.getItemCount()));
-        for (int i=0; i<cd.getItemCount(); ++i)
+        if (cd != null)
         {
-            Uri u = cd.getItemAt(i).getUri();
-            imageUris.add(u);
-            tv.setText(tv.getText() + u.getPath() + "\n");
+            for (int i = 0; i < cd.getItemCount(); ++i)
+            {
+                Uri u = cd.getItemAt(i).getUri();
+                imageUris.add(u);
+            }
+        }
+        Uri uri = data.getData();
+        if (uri != null)
+        {
+            imageUris.add(uri);
         }
 
+        updateLabel();
+    }
+
+    private void updateLabel()
+    {
+        TextView tv = findViewById(R.id.debugText);
+        if (imageUris.isEmpty())
+        {
+            tv.setText("No files selected");
+        }
+        else
+        {
+            tv.setText(String.format("%d files selected:\n", imageUris.size()));
+            for (Uri u : imageUris)
+            {
+                tv.setText(tv.getText() + u.getPath() + "\n");
+            }
+        }
     }
 
     public void onSettingsClick(View view)
     {
-        Toast.makeText(this, "NOT IMPLEMENTED", Toast.LENGTH_SHORT).show();
+        Intent in = new Intent(this, SettingsActivity.class);
+        startActivity(in);
     }
 
     public void onClearClick(View view)
     {
-        TextView tv = findViewById(R.id.debugText);
-        tv.setText("No Files");
         imageUris.clear();
+        updateLabel();
     }
 
     public void onAddClick(View view)
