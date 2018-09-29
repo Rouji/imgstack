@@ -9,7 +9,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import android.support.annotation.Nullable;
@@ -53,7 +52,8 @@ public class StackService extends IntentService
         public static final int ERROR = 3;
     }
 
-    private static final int notificationID = 1;
+    public final static String ACTION_STACK = "at.r0.imgstack.STACK";
+    public final static String ACTION_DELETE = "at.r0.imgstack.DELETE";
 
     public StackService()
     {
@@ -75,29 +75,22 @@ public class StackService extends IntentService
     @Override
     protected void onHandleIntent(@Nullable Intent intent)
     {
-        final ResultReceiver receiver = intent.getParcelableExtra("RECEIVER");
-
-        Notification.Builder builder = null;
-            builder = new Notification.Builder(getBaseContext())
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setTicker("ticker")
-                    .setContentTitle("title")
-                    .setContentText("text")
-                    .setOngoing(true)
-                    .setCategory(Notification.CATEGORY_SERVICE)
-                    .setProgress(0,0, false);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+        String action = intent.getAction();
+        if (action.equals(ACTION_DELETE))
         {
-            NotificationChannel chan = new NotificationChannel("at.r0.imgstack", "bgservice",
-                                                               NotificationManager.IMPORTANCE_NONE);
-            chan.setLightColor(Color.BLUE);
-            chan.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-            NotificationManager mgt = (NotificationManager) getSystemService(
-                    Context.NOTIFICATION_SERVICE);
-            mgt.createNotificationChannel(chan);
-            builder.setChannelId(chan.getId());
+            new File(intent.getStringExtra("FILE_PATH")).delete();
+            ((NotificationManager)this.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(intent.getIntExtra("NOTIFICATION_ID", -1));
+            return;
         }
-        startForeground(notificationID, builder.build());
+        else if (!action.equals((ACTION_STACK)))
+        {
+            return;
+        }
+
+        final ResultReceiver receiver = intent.getParcelableExtra("RECEIVER");
+        final StackNotification notification = new StackNotification(this);
+
+        notification.start();
 
         try
         {
@@ -128,18 +121,21 @@ public class StackService extends IntentService
                 {
                     s = new Stacker(grey);
                     rgb.convertTo(out, CvType.CV_32FC3, 1.0 / (255.0 * n));
-                    progress(receiver, prog, n);
-                    continue;
                 }
-                s.stack(rgb, grey, rgb);
-                rgb.convertTo(tmp, CvType.CV_32FC3, 1.0 / (255.0 * n));
-                Core.add(out, tmp, out);
+                else
+                {
+                    s.stack(rgb, grey, rgb);
+                    rgb.convertTo(tmp, CvType.CV_32FC3, 1.0 / (255.0 * n));
+                    Core.add(out, tmp, out);
+                }
                 progress(receiver, prog, n);
+                notification.progress(prog, n);
             }
             out.convertTo(out, CvType.CV_8UC3, 255.0);
 
             File outputFile = saveMat(out);
             result(receiver, outputFile);
+            notification.success(outputFile);
         }
         catch (Exception ex)
         {

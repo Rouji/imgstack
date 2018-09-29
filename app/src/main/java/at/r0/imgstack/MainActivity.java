@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity
 
         Intent in = new Intent(this, StackService.class);
         in.setClipData(data.getClipData());
+        in.setAction(StackService.ACTION_STACK);
         in.putExtra("RECEIVER", rr);
         startService(in);
     }
