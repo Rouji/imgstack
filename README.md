@@ -4,7 +4,7 @@
 * ???
 * Less noise and stuff
 
-![test](sidebyside.jpg)
+![single photo and stacked result side-by-side](sidebyside.jpg)
 (hint: zoom in)
 
 # Working with the Android Studio Project
